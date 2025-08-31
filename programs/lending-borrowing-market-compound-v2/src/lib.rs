@@ -27,6 +27,11 @@ pub mod aurum {
         instructions::handle_set_unpause(ctx)
     }
 
+    // update config
+    pub fn update_config(ctx: Context<UpdateConfig>, params: GlobalConfigParams) -> Result<()> {
+        instructions::handler_update_config(ctx, params)
+    }
+
     // update treasury
     pub fn update_treasury(ctx: Context<UpdateTreasury>) -> Result<()> {
         instructions::handler_update_treasury(ctx)
@@ -43,6 +48,10 @@ pub mod aurum {
 
     pub fn deposit(ctx: Context<Deposit>, amount: u64) -> Result<()> {
         instructions::handler_deposit(ctx, amount)
+    }
+    
+    pub fn borrow(ctx: Context<Borrow>, amount: u64) -> Result<()> {
+        instructions::handler_borrow(ctx, amount)
     }
     
     pub fn withdraw(ctx: Context<Withdraw>, amount: u64) -> Result<()> {
