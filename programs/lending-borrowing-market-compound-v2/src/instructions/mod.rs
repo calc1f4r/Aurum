@@ -1,6 +1,6 @@
 pub mod ixn_initialize_config;
 pub mod ixn_set_pause;
-pub mod ixn_update_config;
+pub mod ixn_update_treasury;
 pub mod ixn_whitelist_mint;
 pub mod ixn_initialize_market;
 pub mod ixn_deposit;
@@ -16,7 +16,7 @@ pub mod ixn_liquidate;
 
 pub use ixn_initialize_config::*;
 pub use ixn_set_pause::*;
-pub use ixn_update_config::*;
+pub use ixn_update_treasury::*;
 pub use ixn_whitelist_mint::*;
 pub use ixn_initialize_market::*;
 pub use ixn_deposit::*;

@@ -27,9 +27,9 @@ pub mod aurum {
         instructions::handle_set_unpause(ctx)
     }
 
-    // update config
-    pub fn update_config(ctx: Context<UpdateConfig>, params: GlobalConfigParams) -> Result<()> {
-        instructions::handler_update_config(ctx, params)
+    // update treasury
+    pub fn update_treasury(ctx: Context<UpdateTreasury>) -> Result<()> {
+        instructions::handler_update_treasury(ctx)
     }
 
     // whitelist mint allows bot to whitelist a mint
