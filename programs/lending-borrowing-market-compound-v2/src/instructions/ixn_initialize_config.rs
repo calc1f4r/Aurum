@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 use crate::constants::CONFIG_SEED;
-use crate::states::global_config::{Config};
+use crate::states::global_config::{GlobalConfig};
 
 // initialized the global config 
 #[derive(Accounts)]
@@ -8,11 +8,11 @@ pub struct InitializeConfig<'info> {
     #[account(
         init,
         payer = admin,
-        space = 8 + Config::INIT_SPACE,
+        space = 8 + GlobalConfig::INIT_SPACE,
         seeds = [CONFIG_SEED.as_bytes()],
         bump
     )]
-    pub config: Account<'info, Config>,
+    pub config: Account<'info, GlobalConfig>,
     #[account(mut)]
     pub admin: Signer<'info>,
 

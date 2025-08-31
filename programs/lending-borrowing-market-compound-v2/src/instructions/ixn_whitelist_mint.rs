@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::Mint;
 use crate::states::mint_whitelisted::{MintWhitelisted, MintWhitelistedParams};
-use crate::states::global_config::Config;
+use crate::states::global_config::GlobalConfig;
 use crate::constants::MINT_WHITELISTED_SEED;
 use anchor_lang::{
     prelude::InterfaceAccount,
@@ -21,7 +21,7 @@ pub struct WhitelistMint<'info> {
         mut,
         has_one = admin,
     )]
-    pub config: Account<'info, Config>,
+    pub config: Account<'info, GlobalConfig>,
     
     #[account(mut)]
     pub admin: Signer<'info>,
@@ -53,13 +53,11 @@ pub fn handler_whitelist_mint(
     // Update or initialize the mint whitelisted account    
     mint_whitelisted.mint = ctx.accounts.mint.key();
     mint_whitelisted.bump = bump;
-    mint_whitelisted.pyth_price_feed = params.pyth_price_feed;
     mint_whitelisted.mint_decimals = ctx.accounts.mint.decimals;
     mint_whitelisted.is_whitelisted = params.is_whitelisted;
     } 
     else{
         mint_whitelisted.is_whitelisted = params.is_whitelisted;
-        mint_whitelisted.pyth_price_feed = params.pyth_price_feed;
     }
     
     Ok(())

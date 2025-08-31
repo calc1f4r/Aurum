@@ -3,7 +3,7 @@ use anchor_lang::prelude::*;
 
 #[derive(InitSpace)]
 #[account]
-pub struct Config {
+pub struct GlobalConfig {
     // This can withdraw the rates difference between borrow - supply (Protocol fees)
     pub treasury: Pubkey,
     pub admin: Pubkey,

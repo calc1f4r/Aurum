@@ -27,6 +27,12 @@ pub enum AurumError {
     InsufficientBalance,
     #[msg("Insufficient liquidity in market")] 
     InsufficientLiquidity,
+    #[msg("Insufficient collateral for requested borrow")] 
+    InsufficientCollateral,
     #[msg("Position not eligible for liquidation")]
     NotLiquidatable,
+    #[msg("Invalid price feed data")]
+    InvalidPriceFeed,
+    #[msg("Invalid position")]
+    InvalidPosition,
 }

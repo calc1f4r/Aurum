@@ -1,10 +1,11 @@
 use anchor_lang::prelude::*;
-use crate::states::global_config::{Config};
+use crate::states::global_config::GlobalConfig;
 use crate::errors::AurumError::TresurySameAsOldOne;
 #[derive(Accounts)]
 pub struct UpdateTreasury<'info> {
     #[account(mut, has_one = admin)]
-    pub config: Account<'info, Config>,
+    pub config: Account<'info, GlobalConfig>,
+    /// CHECK : CHECHED AND ADMIN CONTROLLED 
     #[account(constraint = new_treasury.key() != config.treasury @TresurySameAsOldOne)]
     pub new_treasury: AccountInfo<'info>,
     #[account(mut)]

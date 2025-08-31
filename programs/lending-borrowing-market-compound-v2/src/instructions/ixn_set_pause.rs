@@ -1,5 +1,5 @@
 use anchor_lang::prelude::*;
-use crate::states::global_config::Config;
+use crate::states::global_config::GlobalConfig;
 use crate::constants::CONFIG_SEED;
 use crate::errors::AurumError;
 #[derive(Accounts)]
@@ -10,7 +10,7 @@ pub struct SetPause<'info> {
         seeds = [CONFIG_SEED.as_bytes()],
         bump = config.bump
     )]
-    pub config: Account<'info, Config>,
+    pub config: Account<'info, GlobalConfig>,
     #[account(mut)]
     pub admin: Signer<'info>,
     // only state update no need of the system program

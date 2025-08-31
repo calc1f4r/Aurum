@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 
 use crate::constants::{BPS_DENOMINATOR, INDEX_MANTISSA, SECONDS_PER_YEAR};
-use crate::states::global_config::Config;
+use crate::states::global_config::GlobalConfig;
 use crate::states::market::Market;
 use crate::utils::{mul_div_floor, ray_div, ray_mul};
 
@@ -13,14 +13,14 @@ pub struct AccrueInterest<'info> {
     #[account(
         constraint = !config.paused,
     )]
-    pub config: Account<'info, Config>,
+    pub config: Account<'info, GlobalConfig>,
 }
 
 pub fn handler_accrue_interest(ctx: Context<AccrueInterest>) -> Result<()> {
     accrue_market(&mut ctx.accounts.market, &ctx.accounts.config)
 }
 
-pub fn accrue_market(market: &mut Account<Market>, config: &Config) -> Result<()> {
+pub fn accrue_market(market: &mut Account<Market>, _config: &GlobalConfig) -> Result<()> {
     let now_ts = Clock::get()?.unix_timestamp as u64;
     if now_ts <= market.last_updated_ts { return Ok(()); }
     let dt_seconds: u128 = (now_ts - market.last_updated_ts) as u128;
@@ -38,24 +38,21 @@ pub fn accrue_market(market: &mut Account<Market>, config: &Config) -> Result<()
         ray_div(total_borrows, denominator)?
     };
 
-    // Convert kink and reserve_factor from BPS to 1e18 mantissa
-    let kink_mantissa: u128 = (config.kink as u128) * (INDEX_MANTISSA / BPS_DENOMINATOR);
-    let reserve_factor_bps: u128 = config.reserve_factor as u128;
+    // Convert kink and reserve_factor from BPS to 1e18 mantissa (use per-market params)
+    let kink_mantissa: u128 = (market.kink_utilization_bps as u128) * (INDEX_MANTISSA / BPS_DENOMINATOR);
+    let reserve_factor_bps: u128 = market.reserve_factor_bps as u128;
     let reserve_factor_mantissa: u128 = reserve_factor_bps * (INDEX_MANTISSA / BPS_DENOMINATOR);
 
     // Interest rate model (per year), all mantissa 1e18
-    let base_rate: u128 = config.base_rate as u128;
-    let slope1: u128 = config.slope1 as u128;
-    let jump_slope: u128 = config.jump_slope as u128;
+    let base_rate: u128 = market.base_rate_per_year as u128;
+    let slope1: u128 = market.slope1_per_year as u128;
+    let jump_slope: u128 = market.slope2_per_year as u128;
 
     let borrow_rate_per_year = if utilization <= kink_mantissa {
-        let u_over_k = if kink_mantissa == 0 { 0 } else { ray_div(utilization, kink_mantissa)? };
-    base_rate + ray_mul(slope1, u_over_k)?
+        base_rate + ray_mul(slope1, utilization)?
     } else {
-    let above_k = utilization - kink_mantissa;
-    let one_minus_k = INDEX_MANTISSA - kink_mantissa;
-        let frac = if one_minus_k == 0 { 0 } else { ray_div(above_k, one_minus_k)? };
-    base_rate + slope1 + ray_mul(jump_slope, frac)?
+        let above_k = utilization - kink_mantissa;
+        base_rate + ray_mul(slope1, kink_mantissa)? + ray_mul(jump_slope, above_k)?
     };
 
     // Convert annual rate to per-second

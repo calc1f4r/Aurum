@@ -1,10 +1,10 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token::{self, Mint, Token, TokenAccount, Transfer};
+use anchor_spl::token_interface::{self, Mint,  TokenAccount, TransferChecked,TokenInterface};
 
 use crate::constants::{USER_POSITION_SEED, MARKET_SEED};
 use crate::errors::AurumError;
 use crate::instructions::ixn_accrue_interest::accrue_market;
-use crate::states::global_config::Config;
+use crate::states::global_config::GlobalConfig;
 use crate::states::market::Market;
 use crate::states::user_position::UserPosition;
 
@@ -19,9 +19,9 @@ pub struct Withdraw<'info> {
     #[account(
         constraint = !config.paused,
     )]
-    pub config: Account<'info, Config>,
+    pub config: Account<'info, GlobalConfig>,
 
-    pub mint: Account<'info, Mint>,
+    pub mint: InterfaceAccount<'info, Mint>,
 
     #[account(
         mut,
@@ -29,7 +29,7 @@ pub struct Withdraw<'info> {
         associated_token::authority=user.key(),
         constraint = user_destination.owner == user.key(),
     )]
-    pub user_destination: Account<'info, TokenAccount>,
+    pub user_destination: InterfaceAccount<'info, TokenAccount>,
 
     #[account(
         mut,
@@ -37,18 +37,18 @@ pub struct Withdraw<'info> {
         associated_token::authority=user.key(),
         constraint = market_vault.key() == market.vault @ AurumError::InvalidVault,
     )]
-    pub market_vault: Account<'info, TokenAccount>,
+    pub market_vault: InterfaceAccount<'info, TokenAccount>,
 
     #[account(
         mut,
         seeds = [USER_POSITION_SEED.as_bytes(), market.key().as_ref(), user.key().as_ref()],
         bump = user_position.bump,
         constraint = user_position.owner == user.key(),
-        constraint = user_position.market == market.key(),
+        constraint = user_position.positions[0].market == market.key(),
     )]
     pub user_position: Account<'info, UserPosition>,
 
-    pub token_program: Program<'info, Token>,
+    pub token_program: Interface<'info, TokenInterface>,
 }
 
 pub fn handler_withdraw(ctx: Context<Withdraw>, amount: u64) -> Result<()> {
@@ -59,23 +59,24 @@ pub fn handler_withdraw(ctx: Context<Withdraw>, amount: u64) -> Result<()> {
 
     let market = &mut ctx.accounts.market;
     let user_position = &mut ctx.accounts.user_position;
+    let position = &mut user_position.positions[0];
 
     // Compound user's supply principal up to current index
-    if user_position.supply_principal > 0 {
-        user_position.supply_principal = user_position.supply_principal * market.supply_index / user_position.supply_index.max(1);
+    if position.supply_principal > 0 {
+        position.supply_principal = position.supply_principal * market.supply_index / position.supply_index.max(1);
     }
-    user_position.supply_index = market.supply_index;
+    position.supply_index = market.supply_index;
 
     // Ensure sufficient balance
-    require!(user_position.supply_principal >= amount as u128, AurumError::InsufficientBalance);
+    require!(position.supply_principal >= amount as u128, AurumError::InsufficientBalance);
 
     // Ensure market has enough cash
     require!(ctx.accounts.market_vault.amount >= amount, AurumError::InsufficientLiquidity);
 
     // Update state
-    user_position.supply_principal = user_position.supply_principal - amount as u128;
+    position.supply_principal -= amount as u128;
 
-    market.total_cash = market.total_cash - amount as u128;
+    market.total_cash -= amount as u128;
 
     // Transfer tokens from market vault to user
     let market_key = market.key();
@@ -86,13 +87,14 @@ pub fn handler_withdraw(ctx: Context<Withdraw>, amount: u64) -> Result<()> {
         &[market.bump],
     ];
     let signer: &[&[&[u8]]] = &[market_seeds];
-    let cpi_accounts = Transfer {
+    let cpi_accounts = TransferChecked {
         from: ctx.accounts.market_vault.to_account_info(),
         to: ctx.accounts.user_destination.to_account_info(),
         authority: market.to_account_info(),
+        mint: ctx.accounts.mint.to_account_info(),
     };
     let cpi_ctx = CpiContext::new_with_signer(ctx.accounts.token_program.to_account_info(), cpi_accounts, signer);
-    token::transfer(cpi_ctx, amount)?;
+    token_interface::transfer_checked(cpi_ctx, amount, ctx.accounts.mint.decimals)?;
 
     Ok(())
 }

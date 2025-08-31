@@ -8,6 +8,7 @@ pub mod ixn_withdraw;
 pub mod ixn_accrue_interest;
 pub mod ixn_repay;
 pub mod ixn_liquidate;
+pub mod ixn_borrow;
 
 // functions to implement 
 // borrow 
@@ -24,3 +25,4 @@ pub use ixn_withdraw::*;
 pub use ixn_accrue_interest::*;
 pub use ixn_repay::*;
 pub use ixn_liquidate::*;
+pub use ixn_borrow::*;

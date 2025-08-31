@@ -5,7 +5,7 @@ mod constants;
 mod errors;
 mod utils;
 use instructions::*;
-use states::global_config::GlobalConfigParams;
+use states::market::MarketInitParams;
 use states::mint_whitelisted::MintWhitelistedParams;
 
 declare_id!("FNb4MR8wChdWqh7Jkzk31VLSTXnNLbYW17j2zxyh3N6w");
@@ -13,8 +13,8 @@ declare_id!("FNb4MR8wChdWqh7Jkzk31VLSTXnNLbYW17j2zxyh3N6w");
 #[program]
 pub mod aurum {
     use super::*;
-    pub fn initialize_config(ctx: Context<InitializeConfig>, params: GlobalConfigParams) -> Result<()> {
-        instructions::handler_initialize_config(ctx, params)
+    pub fn initialize_config(ctx: Context<InitializeConfig>) -> Result<()> {
+        instructions::handler_initialize_config(ctx)
     }
 
     // set pause
@@ -37,8 +37,8 @@ pub mod aurum {
         instructions::handler_whitelist_mint(ctx, params)
     }
     
-    pub fn initialize_market(ctx: Context<InitializeMarket>) -> Result<()> {
-        instructions::handler_initialize_market(ctx)
+    pub fn initialize_market(ctx: Context<InitializeMarket>, params: MarketInitParams) -> Result<()> {
+        instructions::handler_initialize_market(ctx, params)
     }
 
     pub fn deposit(ctx: Context<Deposit>, amount: u64) -> Result<()> {
@@ -59,6 +59,9 @@ pub mod aurum {
 
     pub fn liquidate(ctx: Context<Liquidate>, amount: u64) -> Result<()> {
         instructions::handler_liquidate(ctx, amount)
+    }
+    pub fn borrow(ctx: Context<Borrow>, amount: u64) -> Result<()> {
+        instructions::handler_borrow(ctx, amount)
     }
     
 }

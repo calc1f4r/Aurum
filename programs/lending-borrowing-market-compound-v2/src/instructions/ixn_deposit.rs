@@ -4,7 +4,7 @@ use anchor_spl::token::{self, Mint, Token, TokenAccount, Transfer};
 use crate::constants::{USER_POSITION_SEED};
 use crate::states::market::Market;
 use crate::states::user_position::UserPosition;
-use crate::states::global_config::Config;
+use crate::states::global_config::GlobalConfig;
 use crate::states::mint_whitelisted::MintWhitelisted;
 use crate::constants::MINT_WHITELISTED_SEED;
 
@@ -22,7 +22,7 @@ pub struct Deposit<'info> {
     #[account(
         constraint = !config.paused,
     )]
-    pub config: Account<'info, Config>,
+    pub config: Account<'info, GlobalConfig>,
 
     pub mint: Account<'info, Mint>,
 
@@ -78,31 +78,32 @@ pub fn handler_deposit(ctx: Context<Deposit>, amount: u64) -> Result<()> {
     // Update totals and user principal
     let market = &mut ctx.accounts.market;
     // Overflow will panic (overflow-checks enabled in Cargo profile)
-    market.total_cash = market.total_cash + amount as u128;  
+    market.total_cash += amount as u128;  
 
     let user_position = &mut ctx.accounts.user_position;
-    if user_position.market == Pubkey::default() {
+    if user_position.positions[0].market == Pubkey::default() {
         // init
         let (_pda, bump) = Pubkey::find_program_address(
             &[USER_POSITION_SEED.as_bytes(), market.key().as_ref(), ctx.accounts.user.key().as_ref()],
             ctx.program_id,
         );
         user_position.bump = bump;
-        user_position.market = market.key();
         user_position.owner = ctx.accounts.user.key();
-        user_position.supply_index = market.supply_index;
-        user_position.borrow_index = market.borrow_index;
-        user_position.supply_principal = 0;
-        user_position.borrow_principal = 0;
+        user_position.positions[0].market = market.key();
+        user_position.positions[0].supply_index = market.supply_index;
+        user_position.positions[0].borrow_index = market.borrow_index;
+        user_position.positions[0].supply_principal = 0;
+        user_position.positions[0].borrow_principal = 0;
+        user_position.positions[0].is_collateral = 0;
     }
 
     // Compound the existing supply principal to current index before adding
-    if user_position.supply_principal > 0 {
-        user_position.supply_principal = user_position.supply_principal * market.supply_index / user_position.supply_index.max(1);
+    if user_position.positions[0].supply_principal > 0 {
+        user_position.positions[0].supply_principal = user_position.positions[0].supply_principal * market.supply_index / user_position.positions[0].supply_index.max(1);
     }
-    user_position.supply_index = market.supply_index;
+    user_position.positions[0].supply_index = market.supply_index;
 
-    user_position.supply_principal = user_position.supply_principal + amount as u128;
+    user_position.positions[0].supply_principal += amount as u128;
 
     Ok(())
 }
