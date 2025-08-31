@@ -6,6 +6,13 @@ pub enum AurumError {
     ConfigAlreadyPaused,
     #[msg("Config is already unpaused")]
     ConfigAlreadyUnpaused,
+    #[msg("Tresury can't be same as the old one")]
+    TresurySameAsOldOne,
+    // MINT ERRORS 
+    #[msg("Unsupport native mint token 2022")]
+    UnsupportNativeMintToken2022,
+    #[msg("Mint not supported")]
+    MintNotSupported,
     #[msg("Invalid amount")] 
     InvalidAmount,
     #[msg("Math overflow")] 

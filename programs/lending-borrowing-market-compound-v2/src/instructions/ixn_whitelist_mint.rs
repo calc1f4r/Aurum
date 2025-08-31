@@ -1,9 +1,19 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token::Mint;
+use anchor_spl::token_interface::Mint;
 use crate::states::mint_whitelisted::{MintWhitelisted, MintWhitelistedParams};
 use crate::states::global_config::Config;
 use crate::constants::MINT_WHITELISTED_SEED;
-
+use anchor_lang::{
+    prelude::InterfaceAccount,
+};
+use anchor_spl::{
+    token::Token,
+    token_2022::spl_token_2022::{
+        self,
+        extension::{BaseStateWithExtensions, ExtensionType, StateWithExtensions},
+    },
+};
+use crate::errors::AurumError;
 #[derive(Accounts)]
 #[instruction(params: MintWhitelistedParams)]
 pub struct WhitelistMint<'info> {
@@ -16,7 +26,7 @@ pub struct WhitelistMint<'info> {
     #[account(mut)]
     pub admin: Signer<'info>,
     
-    pub mint: Account<'info, Mint>,
+    pub mint: InterfaceAccount<'info, Mint>,
     
     #[account(
         init_if_needed,
@@ -39,7 +49,8 @@ pub fn handler_whitelist_mint(
     let (_, bump) = Pubkey::find_program_address(&[MINT_WHITELISTED_SEED.as_bytes(), ctx.accounts.mint.key().as_ref()], ctx.program_id);
 
     if mint_whitelisted.bump != bump {
-    // Update or initialize the mint whitelisted account
+        require!(is_supported_mint(&ctx.accounts.mint)?, AurumError::MintNotSupported);
+    // Update or initialize the mint whitelisted account    
     mint_whitelisted.mint = ctx.accounts.mint.key();
     mint_whitelisted.bump = bump;
     mint_whitelisted.pyth_price_feed = params.pyth_price_feed;
@@ -53,4 +64,19 @@ pub fn handler_whitelist_mint(
     
     Ok(())
 }
+pub fn is_supported_mint(mint_account: &InterfaceAccount<Mint>) -> Result<bool> {
+    let mint_info = mint_account.to_account_info();
+    if *mint_info.owner == Token::id() {
+        return Ok(true);
+    }
 
+    let mint_data = mint_info.try_borrow_data()?;
+    let mint = StateWithExtensions::<spl_token_2022::state::Mint>::unpack(&mint_data)?;
+    let extensions = mint.get_extension_types()?;
+    for e in extensions {
+        if e != ExtensionType::MetadataPointer && e != ExtensionType::TokenMetadata {
+            return Ok(false);
+        }
+    }
+    Ok(true)
+}

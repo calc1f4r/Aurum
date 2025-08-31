@@ -19,13 +19,11 @@ pub struct SetPause<'info> {
 pub fn handle_set_pause(ctx: Context<SetPause>) -> Result<()> {
     require!(!ctx.accounts.config.paused, AurumError::ConfigAlreadyPaused);
     ctx.accounts.config.paused = true;
-    ctx.accounts.config.updated_at = Clock::get()?.unix_timestamp as u64;
     Ok(())
 }
 
 pub fn handle_set_unpause(ctx: Context<SetPause>) -> Result<()> {
     require!(ctx.accounts.config.paused, AurumError::ConfigAlreadyUnpaused);
     ctx.accounts.config.paused = false;
-    ctx.accounts.config.updated_at = Clock::get()?.unix_timestamp as u64;
     Ok(())
 }
